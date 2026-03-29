@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jack AI - Offline Assistant</title>
+    <style>
+        /* --- CSS Variables & Theme --- */
+        :root {
+            --neon-blue: #00f2ff;
+            --neon-purple: #bc13fe;
+            --neon-pink: #ff00ff;
+            --bg-light: #f8fafc;
+            --bg-dark: #0a0b10;
+            --card-light: #ffffff;
+            --card-dark: #161b22;
+            --text-light: #1e293b;
+            --text-dark: #f1f5f9;
+            --border-light: #e2e8f0;
+            --border-dark: #1e293b;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* --- Base Styles --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-light);
+            color: var(--text-light);
+            transition: var(--transition);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        body.dark {
+            background-color: var(--bg-dark);
+            color: var(--text-dark);
+        }
+
+        /* --- Layout --- */
+        header {
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-light);
+            z-index: 100;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        body.dark header {
+            background: rgba(22, 27, 34, 0.8);
+            border-bottom: 1px solid var(--border-dark);
+        }
+
+        main {
+            flex: 1;
+            max-width: 800px;
+            width: 100%;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            padding: 1rem;
+            gap: 1rem;
+            overflow: hidden;
+        }
+
+        /* --- Components --- */
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.3);
+        }
+
+        .logo-text h1 {
+            font-size: 1.25rem;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+        }
+
+        .logo-text span {
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #64748b;
+        }
+
+        .controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-icon {
+            background: rgba(0, 0, 0, 0.05);
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: inherit;
+            transition: var(--transition);
+        }
+
+        body.dark .btn-icon {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .btn-icon:hover {
+            background: rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        body.dark .btn-icon:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* --- Mode Selector --- */
+        .mode-selector {
+            display: flex;
+            background: rgba(0, 0, 0, 0.05);
+            padding: 4px;
+            border-radius: 16px;
+            align-self: center;
+        }
+
+        body.dark .mode-selector {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .mode-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            background: transparent;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #64748b;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .mode-btn.active {
+            background: white;
+            color: var(--neon-blue);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        body.dark .mode-btn.active {
+            background: var(--card-dark);
+            color: var(--neon-blue);
+        }
+
+        /* --- Chat Area --- */
+        #chat-area {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            padding-right: 0.5rem;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            display: flex;
+            gap: 0.75rem;
+            max-width: 85%;
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .message.jack .avatar {
+            background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple));
+            color: white;
+        }
+
+        .message.user .avatar {
+            background: #e2e8f0;
+            color: #64748b;
+        }
+
+        body.dark .message.user .avatar {
+            background: #334155;
+            color: #cbd5e1;
+        }
+
+        .bubble {
+            padding: 0.75rem 1rem;
+            border-radius: 16px;
+            font-size: 0.9375rem;
+            line-height: 1.5;
+            position: relative;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        .message.jack .bubble {
+            background: white;
+            border-top-left-radius: 0;
+            border: 1px solid var(--border-light);
+        }
+
+        body.dark .message.jack .bubble {
+            background: var(--card-dark);
+            border: 1px solid var(--border-dark);
+        }
+
+        .message.user .bubble {
+            background: var(--neon-blue);
+            color: white;
+            border-top-right-radius: 0;
+        }
+
+        .timestamp {
+            font-size: 0.65rem;
+            margin-top: 0.4rem;
+            opacity: 0.5;
+            display: block;
+        }
+
+        .message.user .timestamp {
+            text-align: right;
+        }
+
+        /* --- Typing Indicator --- */
+        .typing {
+            display: none;
+            align-items: center;
+            gap: 4px;
+            padding: 12px 16px;
+            background: white;
+            border-radius: 16px;
+            border-top-left-radius: 0;
+            width: fit-content;
+            border: 1px solid var(--border-light);
+        }
+
+        body.dark .typing {
+            background: var(--card-dark);
+            border: 1px solid var(--border-dark);
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            background: var(--neon-blue);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .dot:nth-child(1) { animation-delay: -0.32s; }
+        .dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        /* --- Suggestions --- */
+        .suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        .suggestion-btn {
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            border: 1px solid var(--border-light);
+            background: white;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #64748b;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        body.dark .suggestion-btn {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: var(--border-dark);
+            color: #94a3b8;
+        }
+
+        .suggestion-btn:hover {
+            border-color: var(--neon-blue);
+            color: var(--neon-blue);
+            transform: scale(1.05);
+        }
+
+        /* --- Input Area --- */
+        .input-container {
+            position: relative;
+            padding-bottom: 1rem;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 0.5rem;
+            background: white;
+            padding: 0.5rem;
+            border-radius: 16px;
+            border: 1px solid var(--border-light);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            transition: var(--transition);
+        }
+
+        body.dark .input-wrapper {
+            background: var(--card-dark);
+            border-color: var(--border-dark);
+        }
+
+        .input-wrapper:focus-within {
+            border-color: var(--neon-blue);
+            box-shadow: 0 0 0 2px rgba(0, 242, 255, 0.1);
+        }
+
+        input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.9375rem;
+            color: inherit;
+            outline: none;
+        }
+
+        .send-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            border: none;
+            background: var(--neon-blue);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .send-btn:disabled {
+            background: #e2e8f0;
+            cursor: not-allowed;
+        }
+
+        body.dark .send-btn:disabled {
+            background: #334155;
+        }
+
+        .send-btn:not(:disabled):hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.4);
+        }
+
+        /* --- Footer --- */
+        footer {
+            padding: 1rem;
+            text-align: center;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: #94a3b8;
+            font-weight: 700;
+        }
+
+        /* --- Responsive --- */
+        @media (max-width: 600px) {
+            .mode-btn span { display: none; }
+            .mode-btn { padding: 0.5rem; }
+            .logo-text h1 { font-size: 1rem; }
+            .message { max-width: 95%; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo-container">
+            <div class="logo-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/></svg>
+            </div>
+            <div class="logo-text">
+                <h1>JACK AI</h1>
+                <span>Local Intelligence</span>
+            </div>
+        </div>
+        <div class="controls">
+            <button class="btn-icon" id="theme-toggle" title="Toggle Dark Mode">
+                <svg id="sun-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                <svg id="moon-icon" style="display:none" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+            </button>
+            <button class="btn-icon" id="clear-chat" title="Clear Chat">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <div class="mode-selector">
+            <button class="mode-btn active" data-mode="helper">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+                <span>Helper</span>
+            </button>
+            <button class="mode-btn" data-mode="study">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+                <span>Study</span>
+            </button>
+            <button class="mode-btn" data-mode="fun">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" x2="10" y1="12" y2="12"/><line x1="8" x2="8" y1="10" y2="14"/><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="15.5" cy="10.5" r=".5"/><circle cx="17.5" cy="12.5" r=".5"/></svg>
+                <span>Fun</span>
+            </button>
+        </div>
+
+        <div id="chat-area">
+            <!-- Messages will appear here -->
+        </div>
+
+        <div class="typing" id="typing-indicator">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+
+        <div class="suggestions" id="suggestions-container">
+            <!-- Suggestions will appear here -->
+        </div>
+
+        <div class="input-container">
+            <div class="input-wrapper">
+                <input type="text" id="user-input" placeholder="Ask Jack anything..." autocomplete="off">
+                <button class="send-btn" id="send-btn" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        Jack AI System v1.0.0 • Secure Local Environment
+    </footer>
+
+    <script>
+        /* --- Jack AI Logic Engine --- */
+        const KNOWLEDGE_BASE = {
+            helper: [
+                { keywords: ['hello', 'hi', 'hey'], responses: ["Hello! I'm Jack. How can I assist you today?", "Hi there! Ready to help.", "Greetings! What's on your mind?"] },
+                { keywords: ['help', 'features', 'what can you do'], responses: ["I can help you solve problems, generate ideas, or just chat! I have three modes: Study, Fun, and Helper.", "I'm a local AI. I can work without internet to help you with basic tasks."] },
+                { keywords: ['time', 'date'], responses: [`The current time is ${new Date().toLocaleTimeString()}.`, `Today is ${new Date().toLocaleDateString()}.`] },
+                { keywords: ['thanks', 'thank you'], responses: ["You're welcome!", "Anytime!", "Happy to help!"] }
+            ],
+            study: [
+                { keywords: ['math', 'calculate'], responses: ["I love math! What formula are we looking at?", "I can help with basic arithmetic. Try asking about a specific topic!"] },
+                { keywords: ['science', 'physics', 'biology'], responses: ["Science is fascinating. Are we exploring physics or biology today?", "I have a wide range of scientific facts stored."] },
+                { keywords: ['history', 'past'], responses: ["History teaches us so much. Which era are we focusing on?", "I can help you summarize historical events."] }
+            ],
+            fun: [
+                { keywords: ['joke', 'funny'], responses: ["Why don't scientists trust atoms? Because they make up everything!", "What do you call a fake noodle? An impasta!", "Why did the scarecrow win an award? Because he was outstanding in his field!"] },
+                { keywords: ['story', 'once upon a time'], responses: ["Once upon a time, in a digital realm far away, there lived a small bit of data...", "In a world where gravity was optional, a young explorer decided to walk to the moon..."] },
+                { keywords: ['game', 'bored'], responses: ["We could play a word game! Or I could give you a riddle.", "Want to hear a weird fact or a silly story?"] }
+            ]
+        };
+
+        const FALLBACKS = [
+            "That's interesting! Tell me more.",
+            "I'm not quite sure I understand, but I'm listening.",
+            "Could you rephrase that? I'm still learning!",
+            "Interesting point. How does that make you feel?"
+        ];
+
+        const SUGGESTIONS = {
+            helper: ["How does this work?", "Give me a tip", "What's the date?"],
+            study: ["Explain physics", "Solve 2x=10", "History facts"],
+            fun: ["Tell me a joke", "Tell me a story", "I'm bored"]
+        };
+
+        /* --- State Management --- */
+        let currentMode = 'helper';
+        let isDarkMode = true;
+        let chatHistory = [];
+
+        /* --- DOM Elements --- */
+        const chatArea = document.getElementById('chat-area');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const typingIndicator = document.getElementById('typing-indicator');
+        const suggestionsContainer = document.getElementById('suggestions-container');
+        const themeToggle = document.getElementById('theme-toggle');
+        const clearChatBtn = document.getElementById('clear-chat');
+        const modeButtons = document.querySelectorAll('.mode-btn');
+        const sunIcon = document.getElementById('sun-icon');
+        const moonIcon = document.getElementById('moon-icon');
+
+        /* --- Initialization --- */
+        function init() {
+            // Load from LocalStorage
+            const savedHistory = localStorage.getItem('jack_history');
+            const savedTheme = localStorage.getItem('jack_theme');
+            const savedMode = localStorage.getItem('jack_mode');
+
+            if (savedTheme === 'light') toggleTheme();
+            if (savedMode) setMode(savedMode);
+            
+            if (savedHistory) {
+                chatHistory = JSON.parse(savedHistory);
+                chatHistory.forEach(msg => appendMessage(msg.text, msg.sender, msg.time));
+            } else {
+                const welcome = "Hello! I'm Jack, your offline AI assistant. How can I help you today?";
+                appendMessage(welcome, 'jack');
+                saveMessage(welcome, 'jack');
+            }
+
+            renderSuggestions();
+            userInput.focus();
+        }
+
+        /* --- UI Functions --- */
+        function toggleTheme() {
+            isDarkMode = !isDarkMode;
+            document.body.classList.toggle('dark', isDarkMode);
+            sunIcon.style.display = isDarkMode ? 'block' : 'none';
+            moonIcon.style.display = isDarkMode ? 'none' : 'block';
+            localStorage.setItem('jack_theme', isDarkMode ? 'dark' : 'light');
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            modeButtons.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.mode === mode);
+            });
+            renderSuggestions();
+            localStorage.setItem('jack_mode', mode);
+        }
+
+        function renderSuggestions() {
+            suggestionsContainer.innerHTML = '';
+            SUGGESTIONS[currentMode].forEach(text => {
+                const btn = document.createElement('button');
+                btn.className = 'suggestion-btn';
+                btn.textContent = text;
+                btn.onclick = () => handleSend(text);
+                suggestionsContainer.appendChild(btn);
+            });
+        }
+
+        function appendMessage(text, sender, time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${sender}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'avatar';
+            avatar.innerHTML = sender === 'jack' 
+                ? '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>'
+                : '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            bubble.innerHTML = `<p>${text}</p><span class="timestamp">${time}</span>`;
+
+            msgDiv.appendChild(avatar);
+            msgDiv.appendChild(bubble);
+            chatArea.appendChild(msgDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        function saveMessage(text, sender) {
+            chatHistory.push({ text, sender, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) });
+            localStorage.setItem('jack_history', JSON.stringify(chatHistory));
+        }
+
+        async function handleSend(textOverride) {
+            const text = textOverride || userInput.value.trim();
+            if (!text) return;
+
+            // User Message
+            appendMessage(text, 'user');
+            saveMessage(text, 'user');
+            userInput.value = '';
+            sendBtn.disabled = true;
+
+            // Jack Response
+            typingIndicator.style.display = 'flex';
+            chatArea.scrollTop = chatArea.scrollHeight;
+
+            // Simulate thinking time
+            await new Promise(r => setTimeout(r, 1000 + Math.random() * 1000));
+
+            const response = getJackResponse(text);
+            typingIndicator.style.display = 'none';
+            appendMessage(response, 'jack');
+            saveMessage(response, 'jack');
+        }
+
+        function getJackResponse(input) {
+            const lower = input.toLowerCase();
+            
+            // Search current mode
+            for (const item of KNOWLEDGE_BASE[currentMode]) {
+                if (item.keywords.some(kw => lower.includes(kw))) {
+                    return item.responses[Math.floor(Math.random() * item.responses.length)];
+                }
+            }
+
+            // Search other modes
+            for (const mode in KNOWLEDGE_BASE) {
+                if (mode === currentMode) continue;
+                for (const item of KNOWLEDGE_BASE[mode]) {
+                    if (item.keywords.some(kw => lower.includes(kw))) {
+                        return `(Switching to ${mode} mode) ` + item.responses[Math.floor(Math.random() * item.responses.length)];
+                    }
+                }
+            }
+
+            return FALLBACKS[Math.floor(Math.random() * FALLBACKS.length)];
+        }
+
+        /* --- Event Listeners --- */
+        userInput.oninput = () => sendBtn.disabled = !userInput.value.trim();
+        userInput.onkeypress = (e) => { if (e.key === 'Enter') handleSend(); };
+        sendBtn.onclick = () => handleSend();
+        themeToggle.onclick = toggleTheme;
+        
+        clearChatBtn.onclick = () => {
+            if (confirm("Clear all messages?")) {
+                chatHistory = [];
+                localStorage.removeItem('jack_history');
+                chatArea.innerHTML = '';
+                const welcome = "Chat cleared. How can I help you now?";
+                appendMessage(welcome, 'jack');
+                saveMessage(welcome, 'jack');
+            }
+        };
+
+        modeButtons.forEach(btn => {
+            btn.onclick = () => setMode(btn.dataset.mode);
+        });
+
+        // Start the app
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

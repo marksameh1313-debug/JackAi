@@ -1,0 +1,5 @@
+{
+  "name": "Jack AI",
+  "description": "A smart, self-contained AI assistant that works 100% offline with optional Gemini enhancement.",
+  "requestFramePermissions": []
+}
